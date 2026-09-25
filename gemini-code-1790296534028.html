@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Data Visualization</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body {
+            background-color: #020617; /* Slate 950 */
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7); /* Slate 900 */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(52, 211, 153, 0.1);
+            border-radius: 0.75rem;
+        }
+
+        /* Hide scrollbar for ticker */
+        .ticker-container::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- Live Market Ticker -->
+    <div class="bg-slate-900 border-b border-slate-800 text-xs font-mono py-2 overflow-hidden whitespace-nowrap flex items-center">
+        <div class="ticker-container flex space-x-8 px-4 animate-pulse" id="market-ticker">
+            <span class="text-slate-400">Connecting to market data...</span>
+        </div>
+        <div class="ml-auto px-4 flex items-center border-l border-slate-800">
+            <div id="market-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
+            <span id="market-status-text" class="text-slate-400">Market Open</span>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="glass-panel m-4 p-4 flex flex-col md:flex-row justify-between items-center z-10 sticky top-4">
+        <div class="flex items-center space-x-4 mb-4 md:mb-0">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center">
+                <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Financial Data Visualization</h1>
+                <p class="text-sm text-slate-400 font-mono">Earnings Data Visualizer</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button class="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/50 rounded-md hover:bg-emerald-500 hover:text-white transition-colors text-sm font-medium">Earnings & Store Tracker</button>
+            <button class="px-4 py-2 bg-slate-800 text-slate-300 border border-slate-700 rounded-md hover:bg-slate-700 transition-colors text-sm font-medium">Asset & Portfolio Tracker</button>
+            <div class="w-px h-6 bg-slate-700 mx-2"></div>
+            <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-500 transition-colors text-sm font-medium flex items-center">
+                Export Excel
+            </button>
+            <button onclick="toggleModal('auth-modal')" class="px-4 py-2 bg-transparent text-slate-300 border border-slate-700 rounded-md hover:text-white transition-colors text-sm font-medium">Login</button>
+            <button onclick="toggleModal('auth-modal')" class="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-400 transition-colors text-sm font-medium">Sign Up</button>
+        </div>
+    </header>
+
+    <!-- 3-Column Command Center Layout -->
+    <main class="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT COLUMN: Quick Action & Filter Panel -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Quick Actions</h3>
+                <div class="space-y-2">
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors text-sm text-slate-300 border border-transparent hover:border-emerald-500/30">Add New Section</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors text-sm text-slate-300 border border-transparent hover:border-emerald-500/30">Quick Sale Entry</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors text-sm text-slate-300 border border-transparent hover:border-emerald-500/30">Import Data CSV</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors text-sm text-slate-300 border border-transparent hover:border-emerald-500/30">Backup Local Data</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Time Filter</h3>
+                <div class="space-y-2">
+                    <button class="w-full text-left px-3 py-2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors text-sm">All Time</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 transition-colors text-sm text-slate-300">Year to Date</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 transition-colors text-sm text-slate-300">This Month</button>
+                    <button class="w-full text-left px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 transition-colors text-sm text-slate-300">Today</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER COLUMN: Main Dashboard -->
+        <div class="lg:col-span-7 space-y-6">
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 border-t-2 border-t-emerald-500">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Revenue</p>
+                    <h2 class="text-2xl font-bold text-white mt-1" id="metric-revenue">$0.00</h2>
+                </div>
+                <div class="glass-panel p-4 border-t-2 border-t-emerald-400">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Net Profit</p>
+                    <h2 class="text-2xl font-bold text-emerald-400 mt-1" id="metric-profit">$0.00</h2>
+                </div>
+                <div class="glass-panel p-4 border-t-2 border-t-slate-500">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Operating Cost</p>
+                    <h2 class="text-2xl font-bold text-slate-300 mt-1" id="metric-cost">$0.00</h2>
+                </div>
+                <div class="glass-panel p-4 border-t-2 border-t-emerald-600">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Est. ROI</p>
+                    <h2 class="text-2xl font-bold text-white mt-1" id="metric-roi">0.0%</h2>
+                </div>
+            </div>
+
+            <!-- Main Chart -->
+            <div class="glass-panel p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-white">Interactive Data Visualization</h2>
+                    <div class="flex space-x-2">
+                        <button class="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded">Revenue vs Cost</button>
+                        <button class="px-2 py-1 text-xs bg-slate-800 text-slate-400 rounded">Net Profit</button>
+                    </div>
+                </div>
+                <div class="w-full h-64 relative">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Store Sections Array -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-white">Income Streams & Sections</h2>
+                    <button class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm transition-colors">
+                        + Create Section
+                    </button>
+                </div>
+                
+                <div id="sections-container" class="space-y-4">
+                    <!-- Sections generated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Goal Tracker & Top Performers -->
+        <div class="lg:col-span-3 space-y-6">
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Goal Tracker</h3>
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-400">Monthly Profit Target</span>
+                        <span class="text-emerald-400 font-mono">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div class="bg-emerald-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 text-right">$0.00 / $5,000.00</p>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-400">Cost Reduction</span>
+                        <span class="text-slate-300 font-mono">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div class="bg-slate-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Top Performers</h3>
+                <div class="space-y-3" id="top-performers-list">
+                    <div class="text-sm text-slate-400 italic text-center py-4">
+                        Add data to see top performers.
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Market Watchlist</h3>
+                <div class="space-y-3 font-mono text-sm" id="watchlist-container">
+                    <!-- Watchlist populated by JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Authentication Modal (Hidden by default) -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="glass-panel p-8 max-w-md w-full relative">
+            <button onclick="toggleModal('auth-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">Secure Access</h2>
+            <form class="space-y-4" onsubmit="event.preventDefault();">
+                <div>
+                    <label class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+                    <input type="email" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white focus:border-emerald-500 focus:outline-none" placeholder="data@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Password</label>
+                    <input type="password" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white focus:border-emerald-500 focus:outline-none" placeholder="••••••••">
+                </div>
+                <button class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium transition-colors mt-4">Authenticate</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // --- 1. CORE DATA STATE (Starting strictly with a SAMPLE Section at $0) ---
+        let appData = {
+            sections: [
+                {
+                    id: Date.now(),
+                    name: "SAMPLE Section",
+                    items: [],
+                    totalRevenue: 0.00,
+                    totalCost: 0.00,
+                    totalProfit: 0.00
+                }
+            ]
+        };
+
+        // --- 2. RENDER ENGINE ---
+        function renderDashboard() {
+            const container = document.getElementById('sections-container');
+            container.innerHTML = '';
+            
+            let grandRevenue = 0;
+            let grandCost = 0;
+            let grandProfit = 0;
+
+            appData.sections.forEach(section => {
+                grandRevenue += section.totalRevenue;
+                grandCost += section.totalCost;
+                grandProfit += section.totalProfit;
+
+                const sectionHTML = `
+                    <div class="glass-panel p-4">
+                        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                            <h3 class="text-lg font-medium text-white">${section.name}</h3>
+                            <div class="flex space-x-4 text-sm font-mono">
+                                <span class="text-slate-400">Rev: <span class="text-white">$${section.totalRevenue.toFixed(2)}</span></span>
+                                <span class="text-slate-400">Cost: <span class="text-slate-300">$${section.totalCost.toFixed(2)}</span></span>
+                                <span class="text-slate-400">Profit: <span class="text-emerald-400">$${section.totalProfit.toFixed(2)}</span></span>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700/50">
+                                    <tr>
+                                        <th class="pb-2">Item Name</th>
+                                        <th class="pb-2">Units</th>
+                                        <th class="pb-2">Unit Cost</th>
+                                        <th class="pb-2">Sale Price</th>
+                                        <th class="pb-2">Margin</th>
+                                        <th class="pb-2 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${section.items.length === 0 ? `
+                                        <tr>
+                                            <td colspan="6" class="py-4 text-center text-slate-500 italic">No items yet. Add an item to calculate earnings.</td>
+                                        </tr>
+                                    ` : section.items.map(item => `
+                                        <tr class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                                            <td class="py-2 text-slate-300">${item.name}</td>
+                                            <td class="py-2 text-slate-400">${item.units}</td>
+                                            <td class="py-2 text-slate-400">$${item.cost.toFixed(2)}</td>                                             <td class="py-2 text-slate-300">$${item.price.toFixed(2)}</td>
+                                            <td class="py-2 text-emerald-400">${(((item.price - item.cost) / item.cost) * 100).toFixed(1)}%</td>
+                                            <td class="py-2 text-right">
+                                                <button class="text-slate-500 hover:text-emerald-400 text-xs uppercase tracking-wider">Edit</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-4 flex gap-2">
+                            <input type="text" placeholder="Item Name" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none flex-1">
+                            <input type="number" placeholder="Cost" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none w-20">
+                            <input type="number" placeholder="Price" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none w-20">
+                            <button class="px-3 py-1 bg-slate-800 hover:bg-emerald-600 text-white rounded text-sm transition-colors border border-slate-700 hover:border-emerald-500">Add Item</button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', sectionHTML);
+            });
+
+            // Update Top Metrics
+            document.getElementById('metric-revenue').textContent = `$${grandRevenue.toFixed(2)}`;
+            document.getElementById('metric-cost').textContent = `$${grandCost.toFixed(2)}`;
+            document.getElementById('metric-profit').textContent = `$${grandProfit.toFixed(2)}`;
+            
+            const roi = grandCost > 0 ? ((grandProfit / grandCost) * 100).toFixed(1) : '0.0';
+            document.getElementById('metric-roi').textContent = `${roi}%`;
+
+            updateChart(grandRevenue, grandCost, grandProfit);
+        }
+
+        // --- 3. CHART.JS INTEGRATION ---
+        let mainChart;
+        function updateChart(revenue, cost, profit) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (mainChart) mainChart.destroy();
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Inter';
+
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current Portfolio Overview'],
+                    datasets: [
+                        {
+                            label: 'Gross Revenue',
+                            data: [revenue],
+                            backgroundColor: '#10b981',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Operating Cost',
+                            data: [cost],
+                            backgroundColor: '#475569',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            beginAtZero: true
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 4. LIVE MARKET SIMULATION (Safe Fallback Architecture) ---
+        // Native browser JS cannot fetch real live stock data without CORS errors or paid API keys.
+        // This generates highly realistic pseudo-live data matching Fidelity's UI formatting.
+        const assets = [
+            { sym: 'AAPL', price: 173.50, change: 0 },
+            { sym: 'MSFT', price: 420.21, change: 0 },
+            { sym: 'NVDA', price: 890.05, change: 0 },
+            { sym: 'TSLA', price: 175.34, change: 0 },
+            { sym: 'AMZN', price: 178.15, change: 0 },
+            { sym: 'GOOGL', price: 154.20, change: 0 },
+            { sym: 'GC=F', price: 2345.10, change: 0 }, // Gold
+            { sym: 'SI=F', price: 28.45, change: 0 }    // Silver
+        ];
+
+        function updateTicker() {
+            const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+            const hour = new Date().getHours();
+            const marketClosed = isWeekend || hour < 9 || hour > 16;
+
+            const dot = document.getElementById('market-status-dot');
+            const statusText = document.getElementById('market-status-text');
+            
+            if (marketClosed) {
+                dot.classList.replace('bg-emerald-500', 'bg-slate-500');
+                statusText.textContent = "Market Closed";
+                renderTicker();
+                return; // Stop updating prices
+            }
+
+            // Simulate minor real-time market fluctuations
+            assets.forEach(asset => {
+                const volatility = asset.price * 0.0005; 
+                const move = (Math.random() - 0.5) * volatility;
+                asset.price += move;
+                asset.change += move;
+            });
+            renderTicker();
+        }
+
+        function renderTicker() {
+            const container = document.getElementById('market-ticker');
+            const watchlist = document.getElementById('watchlist-container');
+            container.innerHTML = '';
+            watchlist.innerHTML = '';
+
+            assets.forEach(asset => {
+                const pctChange = ((asset.change / (asset.price - asset.change)) * 100) || 0;
+                const isPos = asset.change >= 0;
+                const colorClass = isPos ? 'text-emerald-400' : 'text-rose-400';
+                const sign = isPos ? '+' : '';
+
+                // Top Ticker
+                container.innerHTML += `
+                    <div class="flex items-center space-x-2">
+                        <span class="text-white font-bold">${asset.sym}</span>
+                        <span class="text-slate-300">$${asset.price.toFixed(2)}</span>
+                        <span class="${colorClass}">${sign}${pctChange.toFixed(2)}%</span>
+                    </div>
+                `;
+
+                // Right Sidebar Watchlist
+                watchlist.innerHTML += `
+                    <div class="flex justify-between items-center py-1 border-b border-slate-800/50 last:border-0">
+                        <span class="text-white">${asset.sym}</span>
+                        <div class="text-right">
+                            <div class="text-slate-300">$${asset.price.toFixed(2)}</div>
+                            <div class="${colorClass} text-xs">${sign}${pctChange.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- 5. UTILITIES ---
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Section,Item,Units,Cost,Price,Margin\n";
+            appData.sections.forEach(section => {
+                if (section.items.length === 0) {
+                     csvContent += `"${section.name}",No Items,0,0,0,0\n`;
+                }
+                section.items.forEach(item => {
+                    const margin = (((item.price - item.cost) / item.cost) * 100).toFixed(2);
+                    csvContent += `"${section.name}","${item.name}",${item.units},${item.cost},${item.price},${margin}%\n`;
+                });
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "financial_data_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            renderDashboard();
+            renderTicker();
+            setInterval(updateTicker, 2500); // Update market every 2.5s
+        };
+    </script>
+</body>
+</html>
