@@ -1,0 +1,2 @@
+# Financial-Data-Visualization-Organization-
+The following project is a Financial Data Visualization &amp; Organization website I created with the help of AI. It's meant to help small business, and especially people account their finances, and understand what's there.
