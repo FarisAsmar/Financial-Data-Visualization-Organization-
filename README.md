@@ -1,2 +1,0 @@
-# Financial-Data-Visualization-Organization-
-The following project is a Financial Data Visualization &amp; Organization website I created with the help of AI. It's meant to help small business, and especially people account their finances, and understand what's there. I hope this can help people, it is free, and will always be free. The project is also connected to REAL-TIME-Stocks and Gold & Silver Spot Prices to make everything easier, and all within one area.
